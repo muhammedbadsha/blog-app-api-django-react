@@ -22,7 +22,6 @@ import uuid
 # Create your views here.
 
 """send email notification """
-
 def email_sending_otp(email,otp):
     subject = "BLOGGER HUB Email verification "
     message = f"This is your email verification OTP' is {otp}"
@@ -33,9 +32,9 @@ def email_sending_otp(email,otp):
         print(e)
     print(email,"sent")
     return Response({'li':'success','status':status.HTTP_200_OK},)
-        
-""" registration of users"""
 
+
+""" registration of users"""
 class RegisterPage(APIView):
     def get(self,request):
         user = User.objects.all()
@@ -122,7 +121,6 @@ class RegisterPage(APIView):
                 return Response({'data':'faild','status':'user is already registered and verifyed go to login page'})
 
 """OTP Verification """
-
 class VerifyEmailOTP(APIView):
     query_set = User.objects.all()
     serializer = ResgisterSerializer
@@ -184,10 +182,42 @@ class VerifyEmailOTP(APIView):
         instance.save()
         return Response('successfully otp send',status=status.HTTP_200_OK)
               
+"""Login users """
+class LoginUser(APIView):
+    pass
 
 
+"""User detail views Updation , deletions"""
+class UserDetailPage(APIView):
+    def get(self, request, id):
+        user = User.objects.get(id = id)
+        serializer = UserView(user)
+        if serializer is not None:
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+            return Response(serializer.errors,status=status.HTTP_404_NOT_FOUND)
 
+    def patch(self, request, id):
+        data = request.data
+        user = get_object_or_404(User,id = id)
+        serializer = UserView(instance=user,data = data )
+        if serializer.is_valid():
+            user = serializer.save() 
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        else:
+            return Response({'data':serializer.errors, 'status':status.HTTP_404_NOT_FOUND})
+    
 
+    def delete(self, request, id):
+        user = User.objects.get(id = id)
+        serializer = UserView(user)
+        if serializer is not None:
+            serializer.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        else:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+"""Home page blog"""
 class HomePage(APIView):
     def get(self,request):
         pass
