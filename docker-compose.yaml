@@ -1,0 +1,22 @@
+services:
+  db:
+    image: postgres
+    volumes:
+      - ./data/db:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=Blog_Hub
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=badsha
+  web:
+    build: .
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/code
+    ports:
+      - "8000:8000"
+    environment:
+      - POSTGRES_NAME=Blog_Hub
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=badsha
+    depends_on:
+      - db
