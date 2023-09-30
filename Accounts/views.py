@@ -35,6 +35,7 @@ def email_sending_otp(email,otp):
     return Response({'li':'success','status':status.HTTP_200_OK},)
         
 """ registration of users"""
+
 class RegisterPage(APIView):
     def get(self,request):
         user = User.objects.all()
@@ -120,7 +121,68 @@ class RegisterPage(APIView):
             else:
                 return Response({'data':'faild','status':'user is already registered and verifyed go to login page'})
 
+"""OTP Verification """
 
+class VerifyEmailOTP(APIView):
+    query_set = User.objects.all()
+    serializer = ResgisterSerializer
+    def get_object(self, pk):
+        try:
+            user = User.objects.get(pk=pk)
+            return user
+        except User.DoesNotExist:
+            raise Http404
+    # print(request.COOKIES['email'])
+    @action(detail=True, methods=['POST'])
+    def post(self, request,id):
+        print('inside')
+        instance = self.get_object(id)
+        print(instance.email_otp,instance.email_verify)
+        
+        serializer = OTPVerification(instance=instance,data=request.data)
+        if serializer.is_valid():
+            otp = request.data['otp']
+            print('serializer data,',otp )
+            print(str(instance.email_otp_expiry)[:19])
+            print(str(datetime.now())[:19])
+        # print(request)
+            if not instance.email_verify and instance.email_otp == otp and instance.email_otp_expiry and str(datetime.now())[:19] < str(instance.email_otp_expiry)[:19]:
+                instance.email_verify = True
+                instance.email_otp_expiry = None
+                instance.max_otp_try = settings.MAX_OTP_TRY
+                instance.email_otp_out = None
+                instance.save()
+
+                return Response("success otp is verified",status=status.HTTP_200_OK)
+        print('bad error',instance)
+        return Response('verification is failed',status=status.HTTP_400_BAD_REQUEST)
+    @action(detail = True, methods=['put'])
+    def regenerate_otp(self, request,id=None):
+        instance = self.get_object(id)
+        if (instance.max_otp_try) == 0 and str(datetime.now())[:19] < str(instance.email_otp_out)[:19]:
+            return Response('maximum otp tries exceeded, try after 1 hour',status=status.HTTP_400_BAD_REQUEST)
+        otp = str(uuid.uuid4())[:6]
+        otp_expires = datetime.now() + timedelta(minutes=10)
+        max_otp_tries = int(instance.max_otp_try)-1
+
+        instance.email_otp = otp
+        instance.email_otp_expiry = otp_expires
+        instance.max_otp_try = max_otp_tries
+        if max_otp_tries == 0 and str(datetime.now())[:19] >= str(instance.email_otp_out)[:19]:
+            instance.email_otp_out =datetime.now() + timedelta(hours=1)
+            instance.max_otp_try -= 1 
+        elif max_otp_tries == -1:
+            instance.max_otp_try = settings.MAX_OTP_TRY
+        #email sending
+            email_sending_otp(instance.email,otp)
+        else:
+            instance.email_otp_out = None
+            instance.max_otp_try = max_otp_tries
+        #email sending
+            email_sending_otp(instance.email,otp)
+
+        instance.save()
+        return Response('successfully otp send',status=status.HTTP_200_OK)
               
 
 
