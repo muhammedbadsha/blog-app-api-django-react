@@ -66,3 +66,21 @@ class ResgisterSerializer(serializers.ModelSerializer):
         instance.email_otp_expiry = email_expiry
 
         instance.save()
+
+class OTPVerification(serializers.Serializer):
+    otp = serializers.CharField(max_length = 6)
+
+
+class UserView(serializers.ModelSerializer):
+    user_name = serializers.CharField(read_only=True)
+    password = serializers.CharField(write_only=True)
+    confirm_password = serializers.CharField(write_only=True)
+    class Meta:
+        model = User
+        fields  = '__all__'
+
+    def validate(self, data):
+        if data['password'] != data['confirm_password']:
+            raise serializers.ValidationError("Passwords must match.")
+        return data
+    
