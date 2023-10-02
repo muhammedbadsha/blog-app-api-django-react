@@ -37,10 +37,8 @@ class ResgisterSerializer(serializers.ModelSerializer):
             profile_pic = validated_data['profile_pic'],
             first_name=validated_data['first_name'],
             last_name = validated_data['last_name'],
-            
             email = validated_data['email'],
-            
-            max_otp_try = settings.MAX_OTP_TRY,
+            max_otp_try = int(settings.MAX_OTP_TRY)-1,
             email_otp = email_otp,
             email_otp_expiry = email_expiry,
             
@@ -56,16 +54,14 @@ class ResgisterSerializer(serializers.ModelSerializer):
         instance.first_name = validated_data.get('first_name', instance.first_name)
         instance.last_name = validated_data.get('last_name', instance.last_name)
         instance.bio = validated_data.get('bio', instance.bio)
-        print(email_otp)
         instance.about = validated_data.get('about', instance.about)
         instance.user_name = validated_data.get('user_name', instance.user_name)
         instance.email = validated_data.get('email', instance.email)
-        print(instance.email_otp,'iiiiiiiiiiii')
         instance.email_otp = email_otp
-        print(instance.email_otp)
         instance.email_otp_expiry = email_expiry
 
         instance.save()
+        return instance
 
 class OTPVerification(serializers.Serializer):
     otp = serializers.CharField(max_length = 6)

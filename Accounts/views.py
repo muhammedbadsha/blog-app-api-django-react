@@ -1,7 +1,7 @@
 # inside app imports
 from .models import User
 # restframeworks
-
+from rest_framework.viewsets import ModelViewSet
 from rest_framework.views import APIView,Response
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -56,34 +56,28 @@ class RegisterPage(APIView):
     def post(self, request):
             data = request.data
             email = data['email']
-            otp = str(uuid.uuid4())[:6]
-            print('this work')
             try:
                 user = get_list_or_404(User,email = email)[0]
             except:
                 user = None
             print(user)
             if user is None:
-                print('user is none')
                 serializer = ResgisterSerializer(data=data, many=False)
                 if serializer.is_valid():
-                    print('valid')
                     user = serializer.create(validated_data=data)
-                    user.email_otp = otp
-                    user.email_otp_expiry = datetime.now() + timedelta(minutes=10)
-                    user.max_otp_try = int(user.max_otp_try) - 1
                     user_session = request.session
                     if user_session is not None:
                         request.session.flush()
                         request.session['email'] = user.id
                     else:
                         request.session['email'] = user.id
-                    serializer.update(user)            
+                    serializer.update(user) 
+                    otp = user.email_otp           
 #email  
                     email = email_sending_otp(email,otp)
 
-                    return Response({'data':serializer.data})
-                return Response({'data':serializer.errors})
+                    return Response(serializer.data)
+                return Response(serializer.errors)
                 
             elif user is not None and user.email_verify==False and user.email:
                 serializer = ResgisterSerializer(instance=user, data = data)
@@ -91,10 +85,7 @@ class RegisterPage(APIView):
                 if serializer.is_valid():
                     if user.email_otp_out is None and int(user.max_otp_try) >= 0:
                         user.user_name = serializer.validated_data['email'].split('@')[0]
-                        user.email_otp = otp
-                        user.email_otp_expiry = datetime.now() + timedelta(minutes=10)
                         user.max_otp_try = int(user.max_otp_try) - 1
-                        # user.save()
                         session = request.session
                         if session is not None:
                             session.flush() 
@@ -102,10 +93,11 @@ class RegisterPage(APIView):
                         else:
                             user.session['email'] = user.id
 
-                        serializer.update(user)
-#email  
-                        email = email_sending_otp(email,otp)
-                        return Response({'data':serializer.data})
+                        updated_user = serializer.update(user)
+# email                  
+                        updated_otp = updated_user.email_otp
+                        email = email_sending_otp(email,updated_otp)
+                        return Response(serializer.data)
                     elif int(user.max_otp_try) >= 0 and user.email_otp_out <= datetime.now():
                         user.max_otp_try = int(settings.MAX_OTP_TRY) - 1
                         user.email_otp_out = None
@@ -116,11 +108,9 @@ class RegisterPage(APIView):
                             request.session['email'] = user.id
                         else:
                             user.session['email'] = user.id
-
                         serializer.update(user)
 #email  
                         email = email_sending_otp(email,otp)
-
                     else:
                         user.email_otp_out = datetime.now() + timedelta(hours=1)
                         user.save()
@@ -130,7 +120,7 @@ class RegisterPage(APIView):
                 return Response({'data':'faild','status':'user is already registered and verifyed go to login page'})
 
 """OTP Verification """
-class VerifyEmailOTP(APIView):
+class VerifyEmailOTP(ModelViewSet):
     query_set = User.objects.all()
     serializer = ResgisterSerializer
     def get_object(self, pk):
@@ -141,9 +131,8 @@ class VerifyEmailOTP(APIView):
             raise Http404
     # print(request.COOKIES['email'])
     @action(detail=True, methods=['POST'])
-    def post(self, request,id):
-        print('inside')
-        instance = self.get_object(id)
+    def verify(self, request,pk):
+        instance = self.get_object(pk)
         print(instance.email_otp,instance.email_verify)
         
         serializer = OTPVerification(instance=instance,data=request.data)
@@ -156,6 +145,8 @@ class VerifyEmailOTP(APIView):
             if not instance.email_verify and instance.email_otp == otp and instance.email_otp_expiry and str(datetime.now())[:19] < str(instance.email_otp_expiry)[:19]:
                 instance.email_verify = True
                 instance.email_otp_expiry = None
+                instance.is_active = True
+                instance.is_staff = True
                 instance.max_otp_try = settings.MAX_OTP_TRY
                 instance.email_otp_out = None
                 instance.save()
@@ -164,8 +155,8 @@ class VerifyEmailOTP(APIView):
         print('bad error',instance)
         return Response('verification is failed',status=status.HTTP_400_BAD_REQUEST)
     @action(detail = True, methods=['put'])
-    def regenerate_otp(self, request,id=None):
-        instance = self.get_object(id)
+    def regenerate_otp(self, request,pk):
+        instance = self.get_object(pk)
         if (instance.max_otp_try) == 0 and str(datetime.now())[:19] < str(instance.email_otp_out)[:19]:
             return Response('maximum otp tries exceeded, try after 1 hour',status=status.HTTP_400_BAD_REQUEST)
         otp = str(uuid.uuid4())[:6]
