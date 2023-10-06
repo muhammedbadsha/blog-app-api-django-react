@@ -184,7 +184,16 @@ class VerifyEmailOTP(ModelViewSet):
               
 """Login users """
 class LoginUser(APIView):
-    pass
+
+    def post(self, request):
+        user = get_object_or_404(User, email = request.data['email'])
+        if not user.check_password(request.data['password']):
+            return Response({'details':'login failed'},status=status.HTTP_404_NOT_FOUND)
+        print(user.email)
+        token = get_tokens_for_user(user)
+
+        serializer = ResgisterSerializer(instance=user)
+        return Response({'token':token,'serailizer':serializer.data},status=status.HTTP_200_OK) 
 
 
 """User detail views Updation , deletions"""

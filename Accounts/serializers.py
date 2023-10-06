@@ -67,6 +67,11 @@ class OTPVerification(serializers.Serializer):
     otp = serializers.CharField(max_length = 6)
 
 
+# class UserLoginSerializer(serializers.Serializer):
+#     email = serializers.EmailField(max_length = 60,nullable=True)
+#     password = serializers.CharField()
+
+
 class UserView(serializers.ModelSerializer):
     user_name = serializers.CharField(read_only=True)
     password = serializers.CharField(write_only=True)
