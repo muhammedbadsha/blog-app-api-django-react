@@ -42,7 +42,7 @@ class MyUserManager(BaseUserManager):
 
 class User(AbstractBaseUser, PermissionsMixin):
     id = models.AutoField(auto_created=True,primary_key=True)
-    profile_pic = models.ImageField(upload_to='profile/')
+    profile_pic = models.ImageField(upload_to='profile/',blank=True,null=True)
     first_name = models.CharField(max_length=250, null=True,)
     last_name = models.CharField(max_length=250)
     bio = models.CharField(max_length=200)

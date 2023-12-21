@@ -49,13 +49,15 @@ class RegisterPage(APIView):
         user = User.objects.all()
         serializer = ResgisterSerializer(user, many=True)
         if serializer is not None:
-            return Response({'data':serializer.data})
+            return Response(serializer.data,status=status.HTTP_200_OK)
         else:
             return Response({'status':status.HTTP_204_NO_CONTENT})
     @action(detail=False, methods=['POST'])
     def post(self, request):
             data = request.data
-            email = data['email']
+            print(data)
+            email = data.get('email')
+            print(email)
             try:
                 user = get_list_or_404(User,email = email)[0]
             except:
@@ -76,8 +78,8 @@ class RegisterPage(APIView):
 #email  
                     email = email_sending_otp(email,otp)
 
-                    return Response(serializer.data)
-                return Response(serializer.errors)
+                    return Response(serializer.data,status=status.HTTP_200_OK)
+                return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
                 
             elif user is not None and user.email_verify==False and user.email:
                 serializer = ResgisterSerializer(instance=user, data = data)
@@ -114,10 +116,11 @@ class RegisterPage(APIView):
                     else:
                         user.email_otp_out = datetime.now() + timedelta(hours=1)
                         user.save()
-                        return Response({'data': 'please waite 1 houre your otp try is out'})
-                return Response({'data':serializer.errors})
+                        return Response(serializer.data, status=status.HTTP_201_CREATED)
+                return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
             else:
-                return Response({'data':'faild','status':'user is already registered and verifyed go to login page'})
+                serializer = ResgisterSerializer(data = data,many=False)
+                return Response(serializer.errors, status = status.HTTP_400_BAD_REQUEST)
 
 """OTP Verification """
 class VerifyEmailOTP(ModelViewSet):
