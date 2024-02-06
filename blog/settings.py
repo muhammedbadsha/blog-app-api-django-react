@@ -79,6 +79,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'Accounts',
+    'blog_contents',
+    'comments',
     # 'csp',
     "corsheaders",
     'rest_framework',
